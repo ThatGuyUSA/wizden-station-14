@@ -17,6 +17,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
+using Robust.Shared.Random;
 
 namespace Content.Server.Cargo.Systems
 {

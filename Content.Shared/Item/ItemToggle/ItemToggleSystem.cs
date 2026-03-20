@@ -18,19 +18,21 @@ namespace Content.Shared.Item.ItemToggle;
 /// <remarks>
 /// If you need extended functionality (e.g. requiring power) then add a new component and use events.
 /// </remarks>
-public sealed partial class ItemToggleSystem : EntitySystem
+public sealed class ItemToggleSystem : EntitySystem
 {
-    [Dependency] private INetManager _netManager = default!;
-    [Dependency] private SharedAppearanceSystem _appearance = default!;
-    [Dependency] private SharedAudioSystem _audio = default!;
-    [Dependency] private SharedPopupSystem _popup = default!;
-    [Dependency] private IGameTiming _gameTiming = default!;
+    [Dependency] private readonly INetManager _netManager = default!;
+    [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
+    [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private readonly SharedPopupSystem _popup = default!;
+    [Dependency] private readonly IGameTiming _gameTiming = default!;
 
-    [Dependency] private EntityQuery<ItemToggleComponent> _itemToggleQuery = default!;
+    private EntityQuery<ItemToggleComponent> _query;
 
     public override void Initialize()
     {
         base.Initialize();
+
+        _query = GetEntityQuery<ItemToggleComponent>();
 
         SubscribeLocalEvent<ItemToggleComponent, ComponentStartup>(OnStartup);
         SubscribeLocalEvent<ItemToggleComponent, MapInitEvent>(OnMapInit);
@@ -119,7 +121,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
     /// <returns>Same as <see cref="TrySetActive"/></returns>
     public bool Toggle(Entity<ItemToggleComponent?> ent, EntityUid? user = null, bool predicted = true, bool showPopup = true)
     {
-        if (!_itemToggleQuery.Resolve(ent, ref ent.Comp, false))
+        if (!_query.Resolve(ent, ref ent.Comp, false))
             return false;
 
         return TrySetActive(ent, !ent.Comp.Activated, user, predicted, showPopup);
@@ -142,7 +144,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
     /// </summary>
     public bool TryActivate(Entity<ItemToggleComponent?> ent, EntityUid? user = null, bool predicted = true, bool showPopup = true)
     {
-        if (!_itemToggleQuery.Resolve(ent, ref ent.Comp, false))
+        if (!_query.Resolve(ent, ref ent.Comp, false))
             return false;
 
         var uid = ent.Owner;
@@ -189,7 +191,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
     /// </summary>
     public bool TryDeactivate(Entity<ItemToggleComponent?> ent, EntityUid? user = null, bool predicted = true, bool showPopup = true)
     {
-        if (!_itemToggleQuery.Resolve(ent, ref ent.Comp, false))
+        if (!_query.Resolve(ent, ref ent.Comp, false))
             return false;
 
         var uid = ent.Owner;
@@ -320,7 +322,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
 
     public bool IsActivated(Entity<ItemToggleComponent?> ent)
     {
-        if (!_itemToggleQuery.Resolve(ent, ref ent.Comp, false))
+        if (!_query.Resolve(ent, ref ent.Comp, false))
             return true; // assume always activated if no component
 
         return ent.Comp.Activated;
