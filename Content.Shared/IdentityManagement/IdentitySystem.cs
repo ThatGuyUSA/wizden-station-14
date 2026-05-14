@@ -9,6 +9,7 @@ using Content.Shared.Humanoid;
 using Content.Shared.IdentityManagement.Components;
 using Content.Shared.Inventory;
 using Content.Shared.Inventory.Events;
+using Content.Shared.Verbs;
 using Content.Shared.Preferences;
 using Content.Shared.Verbs;
 using Content.Shared.VoiceMask;

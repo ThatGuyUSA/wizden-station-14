@@ -1,5 +1,6 @@
 using Content.Shared.Tiles;
 using Robust.Shared.Map.Components;
+using Robust.Shared.Map.Enumerators;
 
 namespace Content.Server.Tiles;
 
@@ -10,11 +11,13 @@ public sealed partial class RequiresTileSystem : EntitySystem
      */
 
     [Dependency] private SharedMapSystem _maps = default!;
-    [Dependency] private EntityQuery<RequiresTileComponent> _tilesQuery = default!;
+
+    private EntityQuery<RequiresTileComponent> _tilesQuery;
 
     public override void Initialize()
     {
         base.Initialize();
+        _tilesQuery = GetEntityQuery<RequiresTileComponent>();
         SubscribeLocalEvent<TileChangedEvent>(OnTileChange);
     }
 

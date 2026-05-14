@@ -22,10 +22,19 @@ public sealed partial class XAEThrowThingsAroundSystem : BaseXAESystem<XAEThrowT
     [Dependency] private TileSystem _tile = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private SharedMapSystem _map = default!;
-    [Dependency] private EntityQuery<PhysicsComponent> _physQuery = default!;
+
+    private EntityQuery<PhysicsComponent> _physQuery;
 
     /// <summary> Pre-allocated and re-used collection.</summary>
     private readonly HashSet<EntityUid> _entities = new();
+
+    /// <inheritdoc />
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        _physQuery = GetEntityQuery<PhysicsComponent>();
+    }
 
     /// <inheritdoc />
     protected override void OnActivated(Entity<XAEThrowThingsAroundComponent> ent, ref XenoArtifactNodeActivatedEvent args)

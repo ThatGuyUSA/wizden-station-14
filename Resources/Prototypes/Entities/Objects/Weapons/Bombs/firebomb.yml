@@ -101,7 +101,7 @@
     solution:
       reagents:
       - ReagentId: WeldingFuel
-        Quantity: 40
+        Quantity: 60
   - type: Construction
     node: fuel
     defaultTarget: firebomb

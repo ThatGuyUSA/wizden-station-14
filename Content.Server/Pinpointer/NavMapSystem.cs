@@ -3,6 +3,7 @@ using Content.Server.Atmos.Components;
 using Content.Server.Atmos.EntitySystems;
 using Content.Server.Station.Systems;
 using Content.Shared.Database;
+using Content.Shared.Examine;
 using Content.Shared.Localizations;
 using Content.Shared.Maps;
 using Content.Shared.Pinpointer;
@@ -28,12 +29,12 @@ public sealed partial class NavMapSystem : SharedNavMapSystem
     [Dependency] private IGameTiming _gameTiming = default!;
     [Dependency] private TurfSystem _turfSystem = default!;
 
-    [Dependency] private EntityQuery<AirtightComponent> _airtightQuery = default!;
-    [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
-    [Dependency] private EntityQuery<NavMapComponent> _navQuery = default!;
-
     public const float CloseDistance = 15f;
     public const float FarDistance = 30f;
+
+    private EntityQuery<AirtightComponent> _airtightQuery;
+    private EntityQuery<MapGridComponent> _gridQuery;
+    private EntityQuery<NavMapComponent> _navQuery;
 
     public override void Initialize()
     {
@@ -42,6 +43,10 @@ public sealed partial class NavMapSystem : SharedNavMapSystem
         var categories = Enum.GetNames(typeof(NavMapChunkType)).Length - 1; // -1 due to "Invalid" entry.
         if (Categories != categories)
             throw new Exception($"{nameof(Categories)} must be equal to the number of chunk types");
+
+        _airtightQuery = GetEntityQuery<AirtightComponent>();
+        _gridQuery = GetEntityQuery<MapGridComponent>();
+        _navQuery = GetEntityQuery<NavMapComponent>();
 
         // Initialization events
         SubscribeLocalEvent<StationGridAddedEvent>(OnStationInit);
@@ -163,11 +168,11 @@ public sealed partial class NavMapSystem : SharedNavMapSystem
 
     private void OnNavMapBeaconMapInit(EntityUid uid, NavMapBeaconComponent component, MapInitEvent args)
     {
-        if (component.DefaultText != null && component.Text == null)
-        {
-            component.Text = Loc.GetString(component.DefaultText);
-            Dirty(uid, component);
-        }
+        if (component.DefaultText == null || component.Text != null)
+            return;
+
+        component.Text = Loc.GetString(component.DefaultText);
+        Dirty(uid, component);
 
         UpdateNavMapBeaconData(uid, component);
     }

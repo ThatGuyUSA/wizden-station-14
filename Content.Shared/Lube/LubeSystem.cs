@@ -1,26 +1,26 @@
-using Content.Shared.Administration.Logs;
-using Content.Shared.Chemistry.EntitySystems;
+using Content.Server.Administration.Logs;
 using Content.Shared.Database;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Interaction;
 using Content.Shared.Item;
+using Content.Shared.Lube;
 using Content.Shared.Nutrition.EntitySystems;
 using Content.Shared.Popups;
-using Content.Shared.Random.Helpers;
 using Content.Shared.Verbs;
+using Content.Shared.Chemistry.EntitySystems;
 using Robust.Shared.Audio.Systems;
-using Robust.Shared.Timing;
+using Robust.Shared.Random;
 
-namespace Content.Shared.Lube;
+namespace Content.Server.Lube;
 
 public sealed partial class LubeSystem : EntitySystem
 {
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedSolutionContainerSystem _solutionContainer = default!;
-    [Dependency] private ISharedAdminLogManager _adminLogger = default!;
+    [Dependency] private IRobustRandom _random = default!;
+    [Dependency] private IAdminLogManager _adminLogger = default!;
     [Dependency] private OpenableSystem _openable = default!;
-    [Dependency] private IGameTiming _timing = default!;
 
     public override void Initialize()
     {
@@ -65,27 +65,25 @@ public sealed partial class LubeSystem : EntitySystem
     {
         if (HasComp<LubedComponent>(target) || !HasComp<ItemComponent>(target))
         {
-            _popup.PopupClient(Loc.GetString("lube-failure", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
+            _popup.PopupEntity(Loc.GetString("lube-failure", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
             return false;
         }
 
-        if (HasComp<ItemComponent>(target) && _solutionContainer.TryGetSolution(entity.Owner, entity.Comp.Solution, out var solutionEntity, out _))
+        if (HasComp<ItemComponent>(target) && _solutionContainer.TryGetSolution(entity.Owner, entity.Comp.Solution, out _, out var solution))
         {
-            var quantity = _solutionContainer.RemoveReagent(solutionEntity.Value, entity.Comp.Reagent, entity.Comp.Consumption);
+            var quantity = solution.RemoveReagent(entity.Comp.Reagent, entity.Comp.Consumption);
             if (quantity > 0)
             {
-                _audio.PlayPredicted(entity.Comp.Squeeze, entity.Owner, actor);
-                _popup.PopupClient(Loc.GetString("lube-success", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
-                _adminLogger.Add(LogType.Action, LogImpact.Medium, $"{ToPrettyString(actor):actor} lubed {ToPrettyString(target):subject} with {ToPrettyString(entity.Owner):tool}");
                 var lubed = EnsureComp<LubedComponent>(target);
-                var rand = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(entity));
-                lubed.SlipsLeft = rand.Next(entity.Comp.MinSlips * quantity.Int(), 1 + entity.Comp.MaxSlips * quantity.Int());
+                lubed.SlipsLeft = _random.Next(entity.Comp.MinSlips * quantity.Int(), entity.Comp.MaxSlips * quantity.Int());
                 lubed.SlipStrength = entity.Comp.SlipStrength;
-                Dirty(target, lubed);
+                _adminLogger.Add(LogType.Action, LogImpact.Medium, $"{ToPrettyString(actor):actor} lubed {ToPrettyString(target):subject} with {ToPrettyString(entity.Owner):tool}");
+                _audio.PlayPvs(entity.Comp.Squeeze, entity.Owner);
+                _popup.PopupEntity(Loc.GetString("lube-success", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
                 return true;
             }
         }
-        _popup.PopupClient(Loc.GetString("lube-failure", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
+        _popup.PopupEntity(Loc.GetString("lube-failure", ("target", Identity.Entity(target, EntityManager))), actor, actor, PopupType.Medium);
         return false;
     }
 }

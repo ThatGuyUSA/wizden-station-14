@@ -72,7 +72,8 @@ public sealed partial class TegSystem : EntitySystem
     [Dependency] private DeviceNetworkSystem _deviceNetwork = default!;
     [Dependency] private PointLightSystem _pointLight = default!;
     [Dependency] private SharedPowerReceiverSystem _receiver = default!;
-    [Dependency] private EntityQuery<NodeContainerComponent> _nodeContainerQuery = default!;
+
+    private EntityQuery<NodeContainerComponent> _nodeContainerQuery;
 
     public override void Initialize()
     {
@@ -83,6 +84,8 @@ public sealed partial class TegSystem : EntitySystem
         SubscribeLocalEvent<TegGeneratorComponent, DeviceNetworkPacketEvent>(DeviceNetworkPacketReceived);
 
         SubscribeLocalEvent<TegGeneratorComponent, ExaminedEvent>(GeneratorExamined);
+
+        _nodeContainerQuery = GetEntityQuery<NodeContainerComponent>();
     }
 
     private void GeneratorExamined(EntityUid uid, TegGeneratorComponent component, ExaminedEvent args)

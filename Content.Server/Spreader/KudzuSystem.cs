@@ -16,10 +16,6 @@ public sealed partial class KudzuSystem : EntitySystem
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private DamageableSystem _damageable = default!;
 
-    [Dependency] private EntityQuery<AppearanceComponent> _appearanceQuery = default!;
-    [Dependency] private EntityQuery<KudzuComponent> _kudzuQuery = default!;
-    [Dependency] private EntityQuery<DamageableComponent> _damageableQuery = default!;
-
     private static readonly ProtoId<EdgeSpreaderPrototype> KudzuGroup = "Kudzu";
 
     /// <inheritdoc/>
@@ -96,17 +92,20 @@ public sealed partial class KudzuSystem : EntitySystem
     /// <inheritdoc/>
     public override void Update(float frameTime)
     {
-        var kudzuEnumerator = EntityQueryEnumerator<GrowingKudzuComponent>();
+        var appearanceQuery = GetEntityQuery<AppearanceComponent>();
+        var query = EntityQueryEnumerator<GrowingKudzuComponent>();
+        var kudzuQuery = GetEntityQuery<KudzuComponent>();
+        var damageableQuery = GetEntityQuery<DamageableComponent>();
         var curTime = _timing.CurTime;
 
-        while (kudzuEnumerator.MoveNext(out var uid, out var grow))
+        while (query.MoveNext(out var uid, out var grow))
         {
             if (grow.NextTick > curTime)
                 continue;
 
             grow.NextTick = curTime + TimeSpan.FromSeconds(0.5);
 
-            if (!_kudzuQuery.TryGetComponent(uid, out var kudzu))
+            if (!kudzuQuery.TryGetComponent(uid, out var kudzu))
             {
                 RemCompDeferred(uid, grow);
                 continue;
@@ -117,7 +116,7 @@ public sealed partial class KudzuSystem : EntitySystem
                 continue;
             }
 
-            if (_damageableQuery.TryGetComponent(uid, out var damage))
+            if (damageableQuery.TryGetComponent(uid, out var damage))
             {
                 var totalDamage = _damageable.GetTotalDamage((uid, damage));
                 if (totalDamage > 1.0)
@@ -146,7 +145,7 @@ public sealed partial class KudzuSystem : EntitySystem
                 RemCompDeferred(uid, grow);
             }
 
-            if (_appearanceQuery.TryGetComponent(uid, out var appearance))
+            if (appearanceQuery.TryGetComponent(uid, out var appearance))
             {
                 _appearance.SetData(uid, KudzuVisuals.GrowthLevel, kudzu.GrowthLevel, appearance);
             }

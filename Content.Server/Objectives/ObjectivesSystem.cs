@@ -11,6 +11,8 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using System.Linq;
 using System.Text;
+using Content.Server.Antag;
+using Content.Server.Antag.Components;
 using Content.Server.Objectives.Commands;
 using Content.Shared.CCVar;
 using Content.Shared.Prototypes;
@@ -27,6 +29,7 @@ public sealed partial class ObjectivesSystem : SharedObjectivesSystem
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     [Dependency] private IRobustRandom _random = default!;
+    [Dependency] private AntagSelectionSystem _antag = default!;
     [Dependency] private EmergencyShuttleSystem _emergencyShuttle = default!;
     [Dependency] private SharedJobSystem _job = default!;
 
@@ -59,16 +62,14 @@ public sealed partial class ObjectivesSystem : SharedObjectivesSystem
     {
         // go through each gamerule getting data for the roundend summary.
         var summaries = new Dictionary<string, Dictionary<string, List<(EntityUid, string)>>>();
-        var query = EntityQueryEnumerator<ActiveGameRuleComponent, GameRuleComponent>();
+        var query = EntityQueryEnumerator<ActiveGameRuleComponent, AntagSelectionComponent>();
         while (query.MoveNext(out var uid, out _, out var comp))
         {
-            var info = new ObjectivesTextGetInfoEvent(new List<(EntityUid, string)>(), string.Empty);
-            RaiseLocalEvent(uid, ref info);
-            if (info.Minds.Count == 0)
+            if (comp.AgentName is not { } agent)
                 continue;
 
-            // first group the gamerules by their agents, for example 2 different dragons
-            var agent = info.AgentName;
+            var minds = _antag.GetAntagIdentities((uid, comp));
+
             if (!summaries.ContainsKey(agent))
                 summaries[agent] = new Dictionary<string, List<(EntityUid, string)>>();
 
@@ -81,11 +82,11 @@ public sealed partial class ObjectivesSystem : SharedObjectivesSystem
             if (summary.ContainsKey(prepend.Text))
             {
                 // same prepended text (usually empty) so combine them
-                summary[prepend.Text].AddRange(info.Minds);
+                summary[prepend.Text].AddRange(minds);
             }
             else
             {
-                summary[prepend.Text] = info.Minds.ToList();
+                summary[prepend.Text] = minds.ToList();
             }
         }
 
@@ -147,18 +148,12 @@ public sealed partial class ObjectivesSystem : SharedObjectivesSystem
             var agentSummary = new StringBuilder();
             agentSummary.AppendLine(Loc.GetString("objectives-with-objectives", ("custody", custody), ("title", title), ("agent", agent)));
 
-            foreach (var objectiveGroup in objectives.GroupBy(o => Comp<ObjectiveComponent>(o).Issuer))
+            foreach (var objectiveGroup in objectives.GroupBy(o => Comp<ObjectiveComponent>(o).LocIssuer))
             {
                 //TO DO:
                 //check for the right group here. Getting the target issuer is easy: objectiveGroup.Key
                 //It should be compared to the type of the group's issuer.
-                if (!_prototypeManager.TryIndex(objectiveGroup.Key, out var issuer))
-                {
-                    Log.Error($"Found incorrect objective issuer {issuer} when generating round end text.");
-                    continue;
-                }
-
-                agentSummary.AppendLine(issuer.LocalizedName);
+                agentSummary.AppendLine(objectiveGroup.Key);
 
                 foreach (var objective in objectiveGroup)
                 {
